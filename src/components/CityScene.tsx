@@ -2,7 +2,6 @@ import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera, Preload } from '@react-three/drei';
 import { Suspense, lazy } from 'react';
 import { Location, Road } from '../types/city';
-import { LoadingFallback } from './LoadingManager';
 import * as THREE from 'three';
 
 // Lazy load components for better initial load time
@@ -42,7 +41,7 @@ function SceneContent({ locations, roads }: CitySceneProps) {
       </Suspense>
       
       {/* Core Scene - Priority Loading */}
-      <Suspense fallback={<LoadingFallback message="Loading environment..." />}>
+      <Suspense fallback={null}>
         <FrustumCulling locations={locations}>
           {/* Environment layer - lighting, sky, fog */}
           <EnvironmentLayer />
