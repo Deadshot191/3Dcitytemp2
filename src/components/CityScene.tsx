@@ -94,28 +94,29 @@ export function CityScene({ locations, roads }: CitySceneProps) {
     <Canvas 
       shadows
       gl={{ 
-        antialias: true,
+        antialias: false, // Disable for better performance, SMAA will handle it
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
-        physicallyCorrectLights: true,
-        // Enable shadow mapping
+        depth: true,
+        // Shadow mapping
         shadowMap: {
           enabled: true,
-          type: THREE.PCFSoftShadowMap
+          type: THREE.PCFShadowMap, // Faster than PCFSoft
+          autoUpdate: false // Manual update for better control
         },
-        // Fix blurriness with proper pixel ratio
-        pixelRatio: Math.min(window.devicePixelRatio, 2),
-        // Ensure proper color space
+        // Pixel ratio optimization
+        pixelRatio: Math.min(window.devicePixelRatio, 1.5), // Cap at 1.5 for performance
+        // Color space
         outputColorSpace: THREE.SRGBColorSpace,
-        // Improve rendering quality
+        // Tone mapping
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.0
       }}
-      camera={{ fov: 75, near: 0.1, far: 1000 }}
+      camera={{ fov: 75, near: 0.1, far: 500 }} // Reduced far plane
       performance={{ min: 0.5 }}
-      dpr={[1, 2]}
-      frameloop="demand" // Only render when needed
+      dpr={[1, 1.5]} // Cap device pixel ratio
+      frameloop="always" // Changed from "demand" for smoother experience
     >
       <SceneContent locations={locations} roads={roads} />
     </Canvas>
