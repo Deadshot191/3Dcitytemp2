@@ -70,7 +70,7 @@ function SceneContent({ locations, roads }: CitySceneProps) {
       
       {/* Weather Effects - Load Last */}
       <Suspense fallback={null}>
-        <Weather locations={locations} />
+        <WeatherOptimized locations={locations} />
       </Suspense>
       
       {/* UI Layer - Load After Scene */}
