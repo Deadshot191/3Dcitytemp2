@@ -16,7 +16,7 @@ const FrustumCulling = lazy(() => import('./optimized/FrustumCulling').then(m =>
 const InstancedStreetAssets = lazy(() => import('./optimized/InstancedStreetAssets').then(m => ({ default: m.InstancedStreetAssets })));
 const InstancedVehicles = lazy(() => import('./optimized/InstancedVehicles').then(m => ({ default: m.InstancedVehicles })));
 const InstancedVegetation = lazy(() => import('./optimized/InstancedVegetation').then(m => ({ default: m.InstancedVegetation })));
-const Weather = lazy(() => import('./Weather').then(m => ({ default: m.Weather })));
+const WeatherOptimized = lazy(() => import('./optimized/WeatherOptimized').then(m => ({ default: m.WeatherOptimized })));
 const TerrainLOD = lazy(() => import('./optimized/TerrainLOD').then(m => ({ default: m.TerrainLOD })));
 
 interface CitySceneProps {
