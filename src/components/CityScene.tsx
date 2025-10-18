@@ -42,7 +42,7 @@ function SceneContent({ locations, roads }: CitySceneProps) {
       </Suspense>
       
       {/* Core Scene - Priority Loading */}
-      <Suspense fallback={<LoadingFallback message=\"Loading environment...\" />}>
+      <Suspense fallback={<LoadingFallback message="Loading environment..." />}>
         <FrustumCulling locations={locations}>
           {/* Environment layer - lighting, sky, fog */}
           <EnvironmentLayer />
