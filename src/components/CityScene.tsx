@@ -1,21 +1,23 @@
 import { Canvas } from '@react-three/fiber';
-import { PerspectiveCamera } from '@react-three/drei';
-import { Suspense } from 'react';
-import { EnvironmentLayer } from './layers/Environment';
-import { BuildingsLayer } from './layers/Buildings';
-import { RoadsLayer } from './layers/Roads';
-import { UILayer } from './layers/UI';
-import { SmoothCameraControls } from './optimized/SmoothCameraControls';
-import { EnhancedPostProcessing } from './optimized/EnhancedPostProcessing';
-import { FrustumCulling } from './optimized/FrustumCulling';
-import { InstancedTraffic } from './optimized/InstancedTraffic';
-import { InstancedVegetation } from './optimized/InstancedVegetation';
-import { InstancedStreetAssets } from './optimized/InstancedStreetAssets';
-import { InstancedVehicles } from './optimized/InstancedVehicles';
-import { Terrain } from './Terrain';
-import { Weather } from './Weather';
+import { PerspectiveCamera, Preload } from '@react-three/drei';
+import { Suspense, lazy } from 'react';
 import { Location, Road } from '../types/city';
+import { LoadingFallback } from './LoadingManager';
 import * as THREE from 'three';
+
+// Lazy load components for better initial load time
+const EnvironmentLayer = lazy(() => import('./layers/Environment').then(m => ({ default: m.EnvironmentLayer })));
+const BuildingsLayer = lazy(() => import('./layers/Buildings').then(m => ({ default: m.BuildingsLayer })));
+const RoadsLayer = lazy(() => import('./layers/Roads').then(m => ({ default: m.RoadsLayer })));
+const UILayer = lazy(() => import('./layers/UI').then(m => ({ default: m.UILayer })));
+const SmoothCameraControls = lazy(() => import('./optimized/SmoothCameraControls').then(m => ({ default: m.SmoothCameraControls })));
+const EnhancedPostProcessing = lazy(() => import('./optimized/EnhancedPostProcessing').then(m => ({ default: m.EnhancedPostProcessing })));
+const FrustumCulling = lazy(() => import('./optimized/FrustumCulling').then(m => ({ default: m.FrustumCulling })));
+const InstancedStreetAssets = lazy(() => import('./optimized/InstancedStreetAssets').then(m => ({ default: m.InstancedStreetAssets })));
+const InstancedVehicles = lazy(() => import('./optimized/InstancedVehicles').then(m => ({ default: m.InstancedVehicles })));
+const InstancedVegetation = lazy(() => import('./optimized/InstancedVegetation').then(m => ({ default: m.InstancedVegetation })));
+const Weather = lazy(() => import('./Weather').then(m => ({ default: m.Weather })));
+const TerrainLOD = lazy(() => import('./optimized/TerrainLOD').then(m => ({ default: m.TerrainLOD })));
 
 interface CitySceneProps {
   locations: Location[];
