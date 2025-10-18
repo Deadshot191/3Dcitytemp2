@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { CityScene } from './CityScene';
 import { CityControls } from './CityControls';
@@ -11,6 +11,7 @@ import { ExportControls } from './ExportControls';
 import { MiniMap } from './MiniMap';
 import { DarkModeToggle } from './DarkModeToggle';
 import { CameraUIControls } from './CameraUIControls';
+import { LoadingManager } from './LoadingManager';
 import { ArrowLeft, Loader2, Layers, BarChart3, MessageCircle } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 import { useCityStore } from '../store/cityStore';
