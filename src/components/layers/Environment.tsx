@@ -1,16 +1,17 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, memo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Sky, Stars, Environment, Cloud } from '@react-three/drei';
-import { Bloom, EffectComposer } from '@react-three/postprocessing';
+import { Sky, Stars, Environment } from '@react-three/drei';
 import { useCityStore } from '../../store/cityStore';
+import { OptimizedLighting } from '../optimized/OptimizedLighting';
 import * as THREE from 'three';
 
-export function EnvironmentLayer() {
+// Memoize environment layer to prevent unnecessary re-renders
+export const EnvironmentLayer = memo(function EnvironmentLayer() {
   const { timeOfDay, weather } = useCityStore();
   const { scene } = useThree();
   const isNight = timeOfDay < 6 || timeOfDay > 18;
 
-  // Enhanced sun position calculation
+  // Sun position calculation
   const sunPosition = useMemo(() => {
     const angle = (timeOfDay - 12) * (Math.PI / 12);
     return [
@@ -20,22 +21,7 @@ export function EnvironmentLayer() {
     ] as [number, number, number];
   }, [timeOfDay]);
 
-  // Dynamic lighting based on time and weather
-  const ambientIntensity = useMemo(() => {
-    let base = isNight ? 0.15 : 0.6;
-    if (weather === 'rain') base *= 0.7;
-    if (weather === 'snow') base *= 0.9;
-    return base;
-  }, [isNight, weather]);
-
-  const directionalIntensity = useMemo(() => {
-    let base = isNight ? 0.2 : 1.2;
-    if (weather === 'rain') base *= 0.6;
-    if (weather === 'snow') base *= 0.8;
-    return base;
-  }, [isNight, weather]);
-
-  // Enhanced sky colors based on time of day
+  // Sky parameters
   const skyParams = useMemo(() => {
     if (isNight) {
       return {
@@ -67,7 +53,7 @@ export function EnvironmentLayer() {
     };
   }, [timeOfDay, isNight]);
 
-  // Dynamic fog based on weather and time
+  // Fog parameters
   const fogParams = useMemo(() => {
     let color = isNight ? '#001122' : '#ffffff';
     let near = 10;
@@ -86,7 +72,7 @@ export function EnvironmentLayer() {
     return { color, near, far };
   }, [weather, isNight]);
 
-  // Apply fog to scene
+  // Apply fog (optimized - only when params change)
   useFrame(() => {
     if (scene.fog) {
       const fog = scene.fog as THREE.Fog;
@@ -100,47 +86,16 @@ export function EnvironmentLayer() {
 
   return (
     <>
-      {/* Enhanced lighting system */}
-      <ambientLight intensity={ambientIntensity} color={isNight ? '#4a5568' : '#ffffff'} />
-      <directionalLight
-        position={sunPosition}
-        intensity={directionalIntensity}
-        color={isNight ? '#6366f1' : '#ffffff'}
-        castShadow
-        shadow-mapSize={[4096, 4096]}
-        shadow-camera-far={200}
-        shadow-camera-near={1}
-        shadow-camera-left={-100}
-        shadow-camera-right={100}
-        shadow-camera-top={100}
-        shadow-camera-bottom={-100}
-        shadow-bias={-0.0001}
-      />
+      {/* Optimized lighting system */}
+      <OptimizedLighting />
       
-      {/* Hemisphere light for better ambient lighting */}
-      <hemisphereLight
-        skyColor={isNight ? '#1a202c' : '#87ceeb'}
-        groundColor={isNight ? '#2d3748' : '#8fbc8f'}
-        intensity={ambientIntensity * 0.6}
-      />
-
-      {/* Point lights for night illumination */}
-      {isNight && (
-        <>
-          <pointLight position={[20, 15, 20]} intensity={0.5} color="#ffd700" distance={50} />
-          <pointLight position={[-20, 15, -20]} intensity={0.5} color="#ffd700" distance={50} />
-          <pointLight position={[20, 15, -20]} intensity={0.5} color="#ffd700" distance={50} />
-          <pointLight position={[-20, 15, 20]} intensity={0.5} color="#ffd700" distance={50} />
-        </>
-      )}
-      
-      {/* Dynamic atmospheric effects */}
+      {/* Atmospheric effects */}
       {isNight ? (
         <>
           <Stars 
             radius={300} 
             depth={100} 
-            count={8000} 
+            count={5000} // Reduced from 8000
             factor={6} 
             fade 
             speed={0.5}
@@ -153,39 +108,12 @@ export function EnvironmentLayer() {
             {...skyParams}
             sunPosition={sunPosition} 
           />
-          <Environment preset={weather === 'rain' ? 'city' : 'sunset'} />
-          {weather === 'clear' && (
-            <>
-              <Cloud 
-                opacity={0.4}
-                speed={0.2}
-                width={120}
-                depth={2}
-                segments={30}
-                position={[50, 30, 0]}
-              />
-              <Cloud 
-                opacity={0.3}
-                speed={0.3}
-                width={80}
-                depth={1.5}
-                segments={20}
-                position={[-60, 25, 30]}
-              />
-            </>
-          )}
+          <Environment 
+            preset={weather === 'rain' ? 'city' : 'sunset'} 
+            resolution={256} // Lower resolution for better performance
+          />
         </>
       )}
-      
-      {/* Enhanced post-processing */}
-      <EffectComposer>
-        <Bloom 
-          intensity={isNight ? 2 : 1.2}
-          luminanceThreshold={isNight ? 0.4 : 0.6}
-          luminanceSmoothing={0.9}
-          radius={0.8}
-        />
-      </EffectComposer>
     </>
   );
-}
+});
