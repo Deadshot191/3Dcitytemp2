@@ -26,7 +26,7 @@ interface CitySceneProps {
 
 function SceneContent({ locations, roads }: CitySceneProps) {
   return (
-    <Suspense fallback={null}>
+    <>
       {/* Camera */}
       <PerspectiveCamera 
         makeDefault 
@@ -36,36 +36,56 @@ function SceneContent({ locations, roads }: CitySceneProps) {
         far={1000}
       />
       
-      {/* Enhanced Camera Controls */}
-      <SmoothCameraControls />
+      {/* Enhanced Camera Controls - Load First */}
+      <Suspense fallback={null}>
+        <SmoothCameraControls />
+      </Suspense>
       
-      {/* Frustum Culling Wrapper */}
-      <FrustumCulling locations={locations}>
-        {/* Environment layer - lighting, sky, fog */}
-        <EnvironmentLayer />
-        
-        {/* Terrain base */}
-        <Terrain locations={locations} roads={roads} />
-        
-        {/* Buildings layer - back to original with optimizations */}
-        <BuildingsLayer locations={locations} />
-        
-        {/* Roads layer - spline-based roads */}
-        <RoadsLayer locations={locations} roads={roads} />
-        
-        {/* Optimized instanced elements - single draw calls */}
-        <InstancedStreetAssets locations={locations} roads={roads} />
-        <InstancedVehicles locations={locations} roads={roads} />
-        <InstancedVegetation locations={locations} roads={roads} />
+      {/* Core Scene - Priority Loading */}
+      <Suspense fallback={<LoadingFallback message=\"Loading environment...\" />}>
+        <FrustumCulling locations={locations}>
+          {/* Environment layer - lighting, sky, fog */}
+          <EnvironmentLayer />
+          
+          {/* Terrain base with LOD */}
+          <TerrainLOD locations={locations} roads={roads} />
+          
+          {/* Buildings layer - critical */}
+          <BuildingsLayer locations={locations} />
+          
+          {/* Roads layer - spline-based roads */}
+          <RoadsLayer locations={locations} roads={roads} />
+        </FrustumCulling>
+      </Suspense>
+      
+      {/* Secondary Scene Elements - Deferred Loading */}
+      <Suspense fallback={null}>
+        <FrustumCulling locations={locations}>
+          {/* Optimized instanced elements - single draw calls */}
+          <InstancedStreetAssets locations={locations} roads={roads} />
+          <InstancedVehicles locations={locations} roads={roads} />
+          <InstancedVegetation locations={locations} roads={roads} />
+        </FrustumCulling>
+      </Suspense>
+      
+      {/* Weather Effects - Load Last */}
+      <Suspense fallback={null}>
         <Weather locations={locations} />
-        
-        {/* UI layer - tooltips and overlays */}
-        <UILayer locations={locations} />
-      </FrustumCulling>
+      </Suspense>
       
-      {/* Minimal Post-Processing */}
-      <EnhancedPostProcessing />
-    </Suspense>
+      {/* UI Layer - Load After Scene */}
+      <Suspense fallback={null}>
+        <UILayer locations={locations} />
+      </Suspense>
+      
+      {/* Post-Processing - Load Last */}
+      <Suspense fallback={null}>
+        <EnhancedPostProcessing />
+      </Suspense>
+      
+      {/* Preload critical assets */}
+      <Preload all />
+    </>
   );
 }
 
