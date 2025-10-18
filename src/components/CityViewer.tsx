@@ -27,6 +27,7 @@ export function CityViewer() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentsLocationId, setCommentsLocationId] = useState<string | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
   
   // Memoize project to prevent unnecessary re-renders
   const project = useMemo(() => 
