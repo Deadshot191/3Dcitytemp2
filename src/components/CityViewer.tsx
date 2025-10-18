@@ -199,7 +199,13 @@ export function CityViewer() {
           </div>
         ) : (
           <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <CityScene locations={combinedLocations} roads={combinedRoads} />
+            {/* Loading Manager */}
+            {!sceneReady && <LoadingManager onLoadComplete={() => setSceneReady(true)} />}
+            
+            <Suspense fallback={<LoadingManager />}>
+              <CityScene locations={combinedLocations} roads={combinedRoads} />
+            </Suspense>
+            
             <CameraUIControls />
             <ExportControls projectName={project.name} projectId={project.id} />
             <CityControls />
