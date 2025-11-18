@@ -1,6 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
-from sqlmodel import Field, SQLModel, JSON, Column
+from beanie import Document, Link, Indexed
+from pydantic import BaseModel, Field
 from enum import Enum
 
 class ModelType(str, Enum):
@@ -8,37 +9,49 @@ class ModelType(str, Enum):
     PLANNING = "planning"
     CORPORATE = "corporate"
 
-class ProjectBase(SQLModel):
-    """Base Project model"""
+class Project(Document):
+    """Project database model with nested locations and roads"""
     name: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="")
-    model_type: ModelType = Field(default=ModelType.PLANNING)
-    sectors: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
-    theme: Optional[str] = Field(default=None)
-
-class Project(ProjectBase, table=True):
-    """Project database model"""
-    __tablename__ = "projects"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
+    description: str = ""
+    model_type: ModelType = ModelType.PLANNING
+    sectors: Optional[List[str]] = None
+    theme: Optional[str] = None
+    user_id: str = Field(..., index=True)  # Reference to User._id
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = Field(default=None)
+    updated_at: Optional[datetime] = None
+    
+    class Settings:
+        name = "projects"
+        indexes = [
+            "user_id",
+        ]
 
-class ProjectCreate(ProjectBase):
+class ProjectCreate(BaseModel):
     """Schema for creating a project"""
-    pass
+    name: str = Field(min_length=1, max_length=200)
+    description: str = ""
+    model_type: ModelType = ModelType.PLANNING
+    sectors: Optional[List[str]] = None
+    theme: Optional[str] = None
 
-class ProjectUpdate(SQLModel):
+class ProjectUpdate(BaseModel):
     """Schema for updating a project"""
     name: Optional[str] = None
     description: Optional[str] = None
     sectors: Optional[List[str]] = None
     theme: Optional[str] = None
 
-class ProjectResponse(ProjectBase):
+class ProjectResponse(BaseModel):
     """Schema for project response"""
-    id: int
-    user_id: int
+    id: str
+    name: str
+    description: str
+    model_type: ModelType
+    sectors: Optional[List[str]] = None
+    theme: Optional[str] = None
+    user_id: str
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
