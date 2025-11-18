@@ -5,7 +5,8 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
     # Database
-    DATABASE_URL: str
+    MONGODB_URL: str
+    DATABASE_NAME: str = "city_planning"
     
     # JWT
     SECRET_KEY: str
