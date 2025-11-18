@@ -1,31 +1,38 @@
-from sqlmodel import SQLModel, create_engine
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
 from app.core.config import settings
 
-# Create async engine
-engine: AsyncEngine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    future=True
-)
+# MongoDB client
+mongo_client: AsyncIOMotorClient = None
 
-# Async session factory
-async_session = sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
-)
+async def connect_to_mongo():
+    """Connect to MongoDB"""
+    global mongo_client
+    mongo_client = AsyncIOMotorClient(settings.MONGODB_URL)
+    print(f"✅ Connected to MongoDB at {settings.MONGODB_URL}")
+
+async def close_mongo_connection():
+    """Close MongoDB connection"""
+    global mongo_client
+    if mongo_client:
+        mongo_client.close()
+        print("🔴 MongoDB connection closed")
 
 async def init_db():
-    """Initialize database and create tables"""
-    async with engine.begin() as conn:
-        # Import all models here to ensure they're registered
-        from app.models.user import User
-        from app.models.project import Project
-        
-        # Create all tables
-        await conn.run_sync(SQLModel.metadata.create_all)
+    """Initialize database and register models"""
+    # Import all models here
+    from app.models.user import User
+    from app.models.project import Project
+    from app.models.location import Location
+    from app.models.road import Road
+    
+    # Initialize Beanie with the models
+    await init_beanie(
+        database=mongo_client[settings.DATABASE_NAME],
+        document_models=[User, Project, Location, Road]
+    )
+    print(f"✅ Beanie initialized with database: {settings.DATABASE_NAME}")
 
-async def get_session() -> AsyncSession:
-    """Dependency to get database session"""
-    async with async_session() as session:
-        yield session
+def get_database():
+    """Get database instance"""
+    return mongo_client[settings.DATABASE_NAME]
