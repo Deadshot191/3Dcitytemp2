@@ -1,9 +1,6 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 
-from app.db.database import get_session
 from app.models.user import User, UserCreate, UserLogin, UserResponse, Token
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.core.config import settings
@@ -12,16 +9,11 @@ from app.api.deps import get_current_user
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(
-    user_data: UserCreate,
-    session: AsyncSession = Depends(get_session)
-):
+async def register(user_data: UserCreate):
     """Register a new user"""
     
     # Check if user already exists
-    statement = select(User).where(User.email == user_data.email)
-    result = await session.execute(statement)
-    existing_user = result.scalar_one_or_none()
+    existing_user = await User.find_one(User.email == user_data.email)
     
     if existing_user:
         raise HTTPException(
@@ -38,23 +30,24 @@ async def register(
         is_superuser=user_data.is_superuser
     )
     
-    session.add(db_user)
-    await session.commit()
-    await session.refresh(db_user)
+    # Save to database
+    await db_user.insert()
     
-    return db_user
+    # Convert to response format
+    return UserResponse(
+        id=str(db_user.id),
+        email=db_user.email,
+        is_active=db_user.is_active,
+        is_superuser=db_user.is_superuser,
+        created_at=db_user.created_at
+    )
 
 @router.post("/token", response_model=Token)
-async def login(
-    credentials: UserLogin,
-    session: AsyncSession = Depends(get_session)
-):
+async def login(credentials: UserLogin):
     """Login and get access token"""
     
     # Find user by email
-    statement = select(User).where(User.email == credentials.email)
-    result = await session.execute(statement)
-    user = result.scalar_one_or_none()
+    user = await User.find_one(User.email == credentials.email)
     
     # Verify credentials
     if not user or not verify_password(credentials.password, user.hashed_password):
@@ -84,11 +77,15 @@ async def get_current_user_info(
     current_user: User = Depends(get_current_user)
 ):
     """Get current user information"""
-    return current_user
+    return UserResponse(
+        id=str(current_user.id),
+        email=current_user.email,
+        is_active=current_user.is_active,
+        is_superuser=current_user.is_superuser,
+        created_at=current_user.created_at
+    )
 
 @router.post("/logout")
-async def logout(
-    current_user: User = Depends(get_current_user)
-):
+async def logout(current_user: User = Depends(get_current_user)):
     """Logout (client should delete token)"""
     return {"message": "Successfully logged out"}
