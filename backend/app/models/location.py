@@ -1,6 +1,4 @@
 from typing import Optional, List
-from datetime import datetime
-from beanie import Document
 from pydantic import BaseModel, Field
 
 class LocationPosition(BaseModel):
@@ -10,60 +8,36 @@ class LocationPosition(BaseModel):
     z: float
     
     @classmethod
-    def from_tuple(cls, position: tuple):
-        """Create from tuple [x, y, z]"""
+    def from_list(cls, position: List[float]):
+        """Create from list [x, y, z]"""
         return cls(x=position[0], y=position[1], z=position[2])
     
-    def to_tuple(self) -> List[float]:
-        """Convert to tuple format"""
+    def to_list(self) -> List[float]:
+        """Convert to list format"""
         return [self.x, self.y, self.z]
 
-class Location(Document):
-    """Location/Building document model"""
-    project_id: str = Field(..., index=True)
+class LocationEmbedded(BaseModel):
+    """Embedded Location model (no separate document)"""
+    id: str  # Generated unique ID within project
     name: str
-    type: str  # e.g., 'residential', 'commercial', 'industrial'
+    type: str  # e.g., 'Building', 'Hospital', 'Park'
     position: LocationPosition
     description: Optional[str] = None
     color: Optional[str] = "#60a5fa"
     zone: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
     
-    class Settings:
-        name = "locations"
-        indexes = [
-            "project_id",
-        ]
-
-class LocationCreate(BaseModel):
-    """Schema for creating a location"""
-    name: str
-    type: str
-    position: List[float] = Field(..., min_length=3, max_length=3)
-    description: Optional[str] = None
-    color: Optional[str] = "#60a5fa"
-    zone: Optional[str] = None
-
-class LocationUpdate(BaseModel):
-    """Schema for updating a location"""
-    name: Optional[str] = None
-    type: Optional[str] = None
-    position: Optional[List[float]] = Field(None, min_length=3, max_length=3)
-    description: Optional[str] = None
-    color: Optional[str] = None
-    zone: Optional[str] = None
+    class Config:
+        from_attributes = True
 
 class LocationResponse(BaseModel):
     """Schema for location response"""
     id: str
-    project_id: str
     name: str
     type: str
     position: List[float]
     description: Optional[str] = None
     color: Optional[str] = None
     zone: Optional[str] = None
-    created_at: datetime
     
     class Config:
         from_attributes = True
