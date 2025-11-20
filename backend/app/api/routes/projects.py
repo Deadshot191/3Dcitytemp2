@@ -5,7 +5,7 @@ Handles project generation and management
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.models.project import Project, ProjectCreate, ProjectResponse, ModelType
+from app.models.project import Project, ProjectCreate, ProjectUpdate, ProjectResponse, ModelType
 from app.models.user import User
 from app.models.location import LocationResponse
 from app.models.road import RoadResponse
@@ -179,6 +179,79 @@ async def get_project(
             detail="Not authorized to access this project"
         )
     
+    return ProjectResponse(
+        id=str(project.id),
+        name=project.name,
+        description=project.description,
+        model_type=project.model_type,
+        sectors=project.sectors,
+        theme=project.theme,
+        user_id=project.user_id,
+        locations=[
+            LocationResponse(
+                id=loc.id,
+                name=loc.name,
+                type=loc.type,
+                position=loc.position.to_list(),
+                description=loc.description,
+                color=loc.color,
+                zone=loc.zone
+            )
+            for loc in project.locations
+        ],
+        roads=[
+            RoadResponse(
+                id=road.id,
+                from_location=road.from_location,
+                to_location=road.to_location,
+                distance=road.distance,
+                type=road.type
+            )
+            for road in project.roads
+        ],
+        created_at=project.created_at,
+        updated_at=project.updated_at
+    )
+
+
+@router.put("/{project_id}", response_model=ProjectResponse)
+async def update_project(
+    project_id: str,
+    project_update: ProjectUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Update a project's metadata (name, description, sectors, theme)
+    Note: Does not regenerate locations/roads
+    """
+    project = await Project.get(project_id)
+    
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    
+    # Verify ownership
+    if project.user_id != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this project"
+        )
+    
+    # Update fields that were provided
+    update_data = project_update.model_dump(exclude_unset=True)
+    if update_data:
+        for field, value in update_data.items():
+            setattr(project, field, value)
+        
+        # Update timestamp
+        from datetime import datetime
+        project.updated_at = datetime.utcnow()
+        
+        await project.save()
+    
+    # Return updated project
     return ProjectResponse(
         id=str(project.id),
         name=project.name,
