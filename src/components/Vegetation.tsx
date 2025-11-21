@@ -1,139 +1,17 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Sphere, Cylinder, Instance, Instances } from '@react-three/drei';
 import { useCityStore } from '../store/cityStore';
 import { Location, Road } from '../types/city';
 import * as THREE from 'three';
 
-function Tree({ position, scale = 1, type = 'normal' }) {
-  const treeRef = useRef();
-  const { weather, timeOfDay } = useCityStore();
-  
-  // Determine wind intensity based on weather
-  const windIntensity = weather === 'rain' ? 0.15 : 
-                       weather === 'snow' ? 0.08 : 0.05;
-  
-  useFrame((state) => {
-    // Enhanced swaying motion based on weather
-    const time = state.clock.getElapsedTime();
-    
-    // Base movement
-    const baseMovement = Math.sin(time + position[0]) * windIntensity;
-    
-    // Add gusts of wind
-    const gustFrequency = 0.2;
-    const gustStrength = weather === 'rain' ? 0.1 : 0.05;
-    const gust = Math.sin(time * gustFrequency) * gustStrength;
-    
-    // Apply movement
-    treeRef.current.rotation.x = baseMovement + gust;
-    treeRef.current.rotation.z = Math.cos(time + position[2]) * windIntensity + gust;
-  });
-
-  // Different tree types
-  if (type === 'pine') {
-    return (
-      <group ref={treeRef} position={position} scale={scale}>
-        {/* Tree trunk */}
-        <Cylinder args={[0.1, 0.15, 1.2]} position={[0, 0.6, 0]}>
-          <meshStandardMaterial color="#5d4037" />
-        </Cylinder>
-        {/* Pine tree layers */}
-        <Cylinder args={[0, 0.6, 1]} position={[0, 1.5, 0]}>
-          <meshStandardMaterial color="#2d3e50" />
-        </Cylinder>
-        <Cylinder args={[0, 0.5, 0.8]} position={[0, 2, 0]}>
-          <meshStandardMaterial color="#2d3e50" />
-        </Cylinder>
-        <Cylinder args={[0, 0.3, 0.6]} position={[0, 2.4, 0]}>
-          <meshStandardMaterial color="#2d3e50" />
-        </Cylinder>
-      </group>
-    );
-  }
-  
-  if (type === 'palm') {
-    return (
-      <group ref={treeRef} position={position} scale={scale}>
-        {/* Palm trunk */}
-        <Cylinder args={[0.08, 0.12, 1.5]} position={[0, 0.75, 0]}>
-          <meshStandardMaterial color="#8d6e63" />
-        </Cylinder>
-        {/* Palm leaves */}
-        {Array.from({ length: 7 }).map((_, i) => {
-          const angle = (i / 7) * Math.PI * 2;
-          const x = Math.cos(angle) * 0.5;
-          const z = Math.sin(angle) * 0.5;
-          return (
-            <group key={i} position={[x * 0.3, 1.5, z * 0.3]} rotation={[0.3, angle, 0.4]}>
-              <Cylinder args={[0.02, 0.02, 1]} position={[0, 0.5, 0]}>
-                <meshStandardMaterial color="#4caf50" />
-              </Cylinder>
-            </group>
-          );
-        })}
-      </group>
-    );
-  }
-  
-  // Default tree (deciduous)
-  return (
-    <group ref={treeRef} position={position} scale={scale}>
-      {/* Tree trunk */}
-      <Cylinder args={[0.1, 0.2, 1]} position={[0, 0.5, 0]}>
-        <meshStandardMaterial color="#4a3728" />
-      </Cylinder>
-      {/* Tree foliage */}
-      <Sphere args={[0.5]} position={[0, 1.2, 0]}>
-        <meshStandardMaterial color="#2d5a27" />
-      </Sphere>
-      <Sphere args={[0.4]} position={[0.2, 1, 0.2]}>
-        <meshStandardMaterial color="#2d5a27" />
-      </Sphere>
-      <Sphere args={[0.4]} position={[-0.2, 1, -0.2]}>
-        <meshStandardMaterial color="#2d5a27" />
-      </Sphere>
-    </group>
-  );
-}
-
-function Grass({ position }) {
-  const grassRef = useRef();
-  const { weather } = useCityStore();
-  
-  // Determine wind intensity based on weather
-  const windIntensity = weather === 'rain' ? 0.25 : 
-                       weather === 'snow' ? 0.1 : 0.15;
-  
-  useFrame((state) => {
-    // Enhanced grass movement based on weather
-    const time = state.clock.getElapsedTime();
-    
-    // Base movement
-    const baseMovement = Math.sin(time * 2 + position[0]) * windIntensity;
-    
-    // Add gusts of wind
-    const gustFrequency = 0.5;
-    const gustStrength = weather === 'rain' ? 0.15 : 0.08;
-    const gust = Math.sin(time * gustFrequency) * gustStrength;
-    
-    // Apply movement
-    grassRef.current.rotation.x = baseMovement + gust;
-    grassRef.current.rotation.z = Math.cos(time * 2 + position[2]) * windIntensity + gust;
-  });
-
-  return <Instance ref={grassRef} position={position} />;
-}
-
-// Improved collision detection with roads and buildings
+// Collision detection helper
 function isNearStructure(point: [number, number, number], roads: Road[], locations: Location[], minDistance: number): boolean {
-  // Check distance to buildings with improved accuracy
+  // Check distance to buildings
   for (const location of locations) {
     const dx = point[0] - location.position[0];
     const dz = point[2] - location.position[2];
     const distance = Math.sqrt(dx * dx + dz * dz);
     
-    // Adjust distance based on building type
     let buildingSize = 1;
     if (location.type === 'School' || location.type === 'Hospital') buildingSize = 2;
     if (location.type === 'Hotel') buildingSize = 1.5;
@@ -141,13 +19,12 @@ function isNearStructure(point: [number, number, number], roads: Road[], locatio
     if (distance < minDistance + buildingSize) return true;
   }
 
-  // Check distance to roads with improved accuracy
+  // Check distance to roads
   for (const road of roads) {
     const from = locations.find(l => l.id === road.from);
     const to = locations.find(l => l.id === road.to);
     if (!from || !to) continue;
 
-    // Calculate distance to road segment
     const roadVector = new THREE.Vector2(
       to.position[0] - from.position[0],
       to.position[2] - from.position[2]
@@ -166,7 +43,6 @@ function isNearStructure(point: [number, number, number], roads: Road[], locatio
         (from.position[0] - point[0]) * (to.position[2] - from.position[2])
       ) / roadLength;
       
-      // Adjust distance based on road type
       const roadWidth = road.type === 'main' ? 3 : 
                        road.type === 'secondary' ? 2 : 1.5;
       
@@ -177,9 +53,8 @@ function isNearStructure(point: [number, number, number], roads: Road[], locatio
   return false;
 }
 
-// Function to determine terrain type based on position
+// Terrain type helper
 function getTerrainType(x: number, z: number): string {
-  // Use simplex noise to create biomes
   const biomeScale = 0.02;
   const biomeValue = Math.sin(x * biomeScale) * Math.cos(z * biomeScale);
   
@@ -193,13 +68,203 @@ interface VegetationProps {
   roads: Road[];
 }
 
-export function Vegetation({ locations, roads }: VegetationProps) {
+// Instanced trees component
+function InstancedTrees({ positions, scales, types }: { 
+  positions: THREE.Vector3[];
+  scales: number[];
+  types: string[];
+}) {
+  const trunkMeshRef = useRef<THREE.InstancedMesh>(null);
+  const foliageMeshRef = useRef<THREE.InstancedMesh>(null);
   const { weather } = useCityStore();
   
+  const windIntensity = weather === 'rain' ? 0.15 : 
+                       weather === 'snow' ? 0.08 : 0.05;
+
+  // Setup instance matrices
+  useEffect(() => {
+    if (!trunkMeshRef.current || !foliageMeshRef.current || positions.length === 0) return;
+
+    const tempMatrix = new THREE.Matrix4();
+    const tempPosition = new THREE.Vector3();
+    const tempQuaternion = new THREE.Quaternion();
+    const tempScale = new THREE.Vector3();
+
+    positions.forEach((position, i) => {
+      // Trunk
+      tempPosition.copy(position);
+      tempPosition.y += 0.5 * scales[i];
+      tempQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2);
+      tempScale.set(scales[i], scales[i], scales[i]);
+      tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
+      trunkMeshRef.current.setMatrixAt(i, tempMatrix);
+
+      // Foliage
+      tempPosition.copy(position);
+      tempPosition.y += 1.2 * scales[i];
+      tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
+      foliageMeshRef.current.setMatrixAt(i, tempMatrix);
+    });
+
+    trunkMeshRef.current.instanceMatrix.needsUpdate = true;
+    trunkMeshRef.current.count = positions.length;
+    foliageMeshRef.current.instanceMatrix.needsUpdate = true;
+    foliageMeshRef.current.count = positions.length;
+  }, [positions, scales]);
+
+  // Wind animation
+  useFrame((state) => {
+    if (!trunkMeshRef.current || !foliageMeshRef.current) return;
+    
+    const time = state.clock.getElapsedTime();
+    const tempMatrix = new THREE.Matrix4();
+    
+    for (let i = 0; i < positions.length; i++) {
+      const position = positions[i];
+      
+      // Trunk sway
+      trunkMeshRef.current.getMatrixAt(i, tempMatrix);
+      const trunkPos = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      tempMatrix.decompose(trunkPos, quaternion, scale);
+      
+      const sway = Math.sin(time + position.x * 0.1) * windIntensity;
+      const windQuaternion = new THREE.Quaternion();
+      windQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), sway);
+      quaternion.multiply(windQuaternion);
+      
+      tempMatrix.compose(trunkPos, quaternion, scale);
+      trunkMeshRef.current.setMatrixAt(i, tempMatrix);
+
+      // Foliage sway (more pronounced)
+      foliageMeshRef.current.getMatrixAt(i, tempMatrix);
+      const foliagePos = new THREE.Vector3();
+      tempMatrix.decompose(foliagePos, quaternion, scale);
+      
+      const foliageSway = Math.sin(time * 1.2 + position.x * 0.1) * windIntensity * 1.5;
+      windQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), foliageSway);
+      quaternion.multiply(windQuaternion);
+      
+      tempMatrix.compose(foliagePos, quaternion, scale);
+      foliageMeshRef.current.setMatrixAt(i, tempMatrix);
+    }
+    
+    trunkMeshRef.current.instanceMatrix.needsUpdate = true;
+    foliageMeshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  const foliageColor = weather === 'snow' ? '#a5d6a7' : 
+                       weather === 'rain' ? '#2e7d32' : '#2d5a27';
+
+  if (positions.length === 0) return null;
+
+  return (
+    <group>
+      {/* Tree trunks - single draw call */}
+      <instancedMesh 
+        ref={trunkMeshRef}
+        args={[undefined, undefined, positions.length]}
+        castShadow
+        receiveShadow
+      >
+        <cylinderGeometry args={[0.1, 0.2, 1]} />
+        <meshStandardMaterial color="#4a3728" />
+      </instancedMesh>
+
+      {/* Tree foliage - single draw call */}
+      <instancedMesh 
+        ref={foliageMeshRef}
+        args={[undefined, undefined, positions.length]}
+        castShadow
+        receiveShadow
+      >
+        <sphereGeometry args={[0.5]} />
+        <meshStandardMaterial color={foliageColor} />
+      </instancedMesh>
+    </group>
+  );
+}
+
+// Instanced grass component
+function InstancedGrass({ positions }: { positions: THREE.Vector3[] }) {
+  const grassMeshRef = useRef<THREE.InstancedMesh>(null);
+  const { weather } = useCityStore();
+  
+  const windIntensity = weather === 'rain' ? 0.25 : 
+                       weather === 'snow' ? 0.1 : 0.15;
+
+  // Setup instance matrices
+  useEffect(() => {
+    if (!grassMeshRef.current || positions.length === 0) return;
+
+    const tempMatrix = new THREE.Matrix4();
+    const tempPosition = new THREE.Vector3();
+    const tempQuaternion = new THREE.Quaternion();
+    const tempScale = new THREE.Vector3(1, 1, 1);
+
+    positions.forEach((position, i) => {
+      tempPosition.copy(position);
+      tempQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.random() * Math.PI * 2);
+      tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
+      grassMeshRef.current!.setMatrixAt(i, tempMatrix);
+    });
+
+    grassMeshRef.current.instanceMatrix.needsUpdate = true;
+    grassMeshRef.current.count = positions.length;
+  }, [positions]);
+
+  // Wind animation
+  useFrame((state) => {
+    if (!grassMeshRef.current) return;
+    
+    const time = state.clock.getElapsedTime();
+    const tempMatrix = new THREE.Matrix4();
+    
+    for (let i = 0; i < Math.min(positions.length, 100); i++) { // Animate subset for performance
+      const position = positions[i];
+      grassMeshRef.current.getMatrixAt(i, tempMatrix);
+      
+      const pos = new THREE.Vector3();
+      const quaternion = new THREE.Quaternion();
+      const scale = new THREE.Vector3();
+      tempMatrix.decompose(pos, quaternion, scale);
+      
+      const sway = Math.sin(time * 2 + position.x * 0.5) * windIntensity;
+      const windQuaternion = new THREE.Quaternion();
+      windQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), sway);
+      quaternion.multiply(windQuaternion);
+      
+      tempMatrix.compose(pos, quaternion, scale);
+      grassMeshRef.current.setMatrixAt(i, tempMatrix);
+    }
+    
+    grassMeshRef.current.instanceMatrix.needsUpdate = true;
+  });
+
+  const grassColor = weather === 'snow' ? '#a5d6a7' : 
+                    weather === 'rain' ? '#2e7d32' : '#3a5a40';
+
+  if (positions.length === 0) return null;
+
+  return (
+    <instancedMesh 
+      ref={grassMeshRef}
+      args={[undefined, undefined, positions.length]}
+    >
+      <cylinderGeometry args={[0.05, 0, 0.3]} />
+      <meshStandardMaterial color={grassColor} />
+    </instancedMesh>
+  );
+}
+
+export function Vegetation({ locations, roads }: VegetationProps) {
   const vegetationData = useMemo(() => {
     const data = {
-      trees: [],
-      grass: []
+      treePositions: [] as THREE.Vector3[],
+      treeScales: [] as number[],
+      treeTypes: [] as string[],
+      grassPositions: [] as THREE.Vector3[]
     };
     
     // Generate vegetation around parks and suitable areas
@@ -216,16 +281,13 @@ export function Vegetation({ locations, roads }: VegetationProps) {
         
         const point: [number, number, number] = [x, 0, z];
         
-        // Check if the point is near any road or building
         if (!isNearStructure(point, roads, locations, location.type === 'Park' ? 3 : 5)) {
           if (Math.random() < 0.3) {
-            data.trees.push({
-              position: point,
-              scale: 0.8 + Math.random() * 0.4,
-              type: getTerrainType(x, z)
-            });
+            data.treePositions.push(new THREE.Vector3(x, 0, z));
+            data.treeScales.push(0.8 + Math.random() * 0.4);
+            data.treeTypes.push(getTerrainType(x, z));
           } else {
-            data.grass.push(point);
+            data.grassPositions.push(new THREE.Vector3(x, 0, z));
           }
         }
       }
@@ -239,13 +301,11 @@ export function Vegetation({ locations, roads }: VegetationProps) {
       
       if (!isNearStructure(point, roads, locations, 5)) {
         if (Math.random() < 0.2) {
-          data.trees.push({
-            position: point,
-            scale: 0.6 + Math.random() * 0.3,
-            type: getTerrainType(x, z)
-          });
+          data.treePositions.push(new THREE.Vector3(x, 0, z));
+          data.treeScales.push(0.6 + Math.random() * 0.3);
+          data.treeTypes.push(getTerrainType(x, z));
         } else {
-          data.grass.push(point);
+          data.grassPositions.push(new THREE.Vector3(x, 0, z));
         }
       }
     }
@@ -253,26 +313,19 @@ export function Vegetation({ locations, roads }: VegetationProps) {
     return data;
   }, [locations, roads]);
 
-  // Adjust grass color based on weather
-  const grassColor = weather === 'snow' ? "#a5d6a7" : // Lighter green under snow
-                    weather === 'rain' ? "#2e7d32" : // Darker green when wet
-                    "#3a5a40"; // Default green
-
   return (
     <>
-      {/* Trees */}
-      {vegetationData.trees.map((tree, i) => (
-        <Tree key={`tree-${i}`} {...tree} />
-      ))}
+      {/* Instanced trees - single draw call for all trees */}
+      <InstancedTrees 
+        positions={vegetationData.treePositions}
+        scales={vegetationData.treeScales}
+        types={vegetationData.treeTypes}
+      />
       
-      {/* Instanced grass */}
-      <Instances limit={1000}>
-        <cylinderGeometry args={[0.05, 0, 0.3]} />
-        <meshStandardMaterial color={grassColor} />
-        {vegetationData.grass.map((position, i) => (
-          <Grass key={`grass-${i}`} position={position} />
-        ))}
-      </Instances>
+      {/* Instanced grass - single draw call for all grass */}
+      <InstancedGrass 
+        positions={vegetationData.grassPositions}
+      />
     </>
   );
 }
