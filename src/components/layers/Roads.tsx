@@ -19,7 +19,7 @@ export function RoadsLayer({ locations, roads }: RoadsLayerProps) {
     end: [number, number, number],
     type: 'main' | 'secondary' | 'residential'
   ) => {
-    const points: Vector3[] = [];
+    const points: THREE.Vector3[] = [];
     const segments = type === 'main' ? 12 : type === 'secondary' ? 8 : 6;
     
     for (let i = 0; i <= segments; i++) {
@@ -44,7 +44,7 @@ export function RoadsLayer({ locations, roads }: RoadsLayerProps) {
       const perpX = -dz / length * midpointInfluence;
       const perpZ = dx / length * midpointInfluence;
       
-      points.push(new Vector3(
+      points.push(new THREE.Vector3(
         x + offsetX + perpX,
         y,
         currentZ + offsetZ + perpZ
