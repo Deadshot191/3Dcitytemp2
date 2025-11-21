@@ -56,7 +56,7 @@ class VehiclePool {
 }
 
 export function InstancedTraffic({ locations, roads }: InstancedTrafficProps) {
-  const { timeOfDay } = useCityStore();
+  const { timeOfDay, viewMode } = useCityStore();
   const carMeshRef = useRef<THREE.InstancedMesh>(null);
   const busMeshRef = useRef<THREE.InstancedMesh>(null);
   const truckMeshRef = useRef<THREE.InstancedMesh>(null);
