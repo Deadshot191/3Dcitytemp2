@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import * as THREE from 'three';
 
 type CameraPreset = 'isometric' | 'aerial' | 'walkthrough' | 'free';
+type ViewMode = 'Realistic' | 'Planning' | 'Traffic';
 
 interface CameraState {
   preset: CameraPreset;
@@ -23,6 +24,8 @@ interface CityStore {
   setTimeOfDay: (time: number | ((prev: number) => number)) => void;
   weather: 'clear' | 'rain' | 'snow';
   setWeather: (weather: 'clear' | 'rain' | 'snow') => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
   isPlacingBuilding: boolean;
   setIsPlacingBuilding: (isPlacing: boolean) => void;
   buildingTypeToPlace: Location['type'] | null;
@@ -60,6 +63,8 @@ export const useCityStore = create<CityStore>((set, get) => ({
   })),
   weather: 'clear',
   setWeather: (weather) => set({ weather }),
+  viewMode: 'Realistic',
+  setViewMode: (mode) => set({ viewMode: mode }),
   isPlacingBuilding: false,
   setIsPlacingBuilding: (isPlacing) => set({ isPlacingBuilding: isPlacing }),
   buildingTypeToPlace: null,

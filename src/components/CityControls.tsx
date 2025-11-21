@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { Clock, Cloud, CloudSun, Sun, Moon } from 'lucide-react';
+import { Clock, Cloud, CloudSun, Sun, Moon, Eye } from 'lucide-react';
 import { useCityStore } from '../store/cityStore';
 
 export function CityControls() {
-  const { timeOfDay, setTimeOfDay, weather, setWeather } = useCityStore();
+  const { timeOfDay, setTimeOfDay, weather, setWeather, viewMode, setViewMode } = useCityStore();
 
   const timeFormatted = useMemo(() => {
     const hours = Math.floor(timeOfDay);
@@ -18,6 +18,23 @@ export function CityControls() {
   return (
     <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg dark:shadow-gray-900/20 border border-gray-200 dark:border-gray-700">
       <div className="space-y-4">
+        {/* View Mode Control */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+            <Eye className="w-4 h-4" />
+            View Mode
+          </h3>
+          <select
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value as 'Realistic' | 'Planning' | 'Traffic')}
+            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+          >
+            <option value="Realistic">Realistic</option>
+            <option value="Planning">Planning</option>
+            <option value="Traffic">Traffic</option>
+          </select>
+        </div>
+
         {/* Time Control */}
         <div>
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
