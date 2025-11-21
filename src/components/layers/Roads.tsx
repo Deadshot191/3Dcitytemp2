@@ -11,7 +11,7 @@ interface RoadsLayerProps {
 }
 
 export function RoadsLayer({ locations, roads }: RoadsLayerProps) {
-  const { weather } = useCityStore();
+  const { weather, viewMode } = useCityStore();
 
   // Generate spline points for roads
   const generateSplinePoints = (
