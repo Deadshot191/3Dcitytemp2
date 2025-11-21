@@ -184,6 +184,11 @@ export function InstancedTraffic({ locations, roads }: InstancedTrafficProps) {
     });
   }, [trafficDensity, trafficPaths.length, vehiclePool]);
 
+  // Hide traffic in Planning mode
+  if (viewMode === 'Planning') {
+    return null;
+  }
+
   return (
     <>
       {/* Instanced Cars */}
