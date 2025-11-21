@@ -311,6 +311,13 @@ export function InstancedVegetation({ locations, roads }: InstancedVegetationPro
     return data;
   }, [locations, spatialGrid]);
 
+  const { viewMode } = useCityStore();
+  
+  // Hide vegetation in Planning and Traffic modes
+  if (viewMode === 'Planning' || viewMode === 'Traffic') {
+    return null;
+  }
+
   return (
     <group name="instanced-vegetation">
       {Object.entries(VEGETATION_CONFIGS).map(([type, config]) => (
