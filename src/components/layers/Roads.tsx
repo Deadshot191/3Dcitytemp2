@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { Line, Circle } from '@react-three/drei';
+import { Line } from '@react-three/drei';
 import { useCityStore } from '../../store/cityStore';
-import { Vector3, CatmullRomCurve3 } from 'three';
+import * as THREE from 'three';
 import { Location, Road } from '../../types/city';
+import { createMergedRoadGeometry, createMergedRoundaboutGeometry } from '../../utils/mergeGeometries';
 
 interface RoadsLayerProps {
   locations: Location[];
