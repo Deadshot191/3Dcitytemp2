@@ -198,7 +198,6 @@ export function CityViewer() {
           <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <CityScene locations={combinedLocations} roads={combinedRoads} />
             <CameraUIControls />
-            <ExportControls projectName={project.name} projectId={project.id} />
             <CityControls />
             <BuildingPlacement />
             <LocationInfo />
