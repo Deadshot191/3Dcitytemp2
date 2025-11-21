@@ -1,5 +1,6 @@
 import { useRef, useState, useMemo, useEffect } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
+import { LOD } from '@react-three/drei';
 import { useCityStore } from '../../store/cityStore';
 import { Location } from '../../types/city';
 import * as THREE from 'three';
@@ -21,23 +22,28 @@ const BUILDING_CONFIGS: Record<string, { width: number; height: number; depth: n
   Museum: { width: 3, height: 2, depth: 3, color: '#f472b6' },
 };
 
-// Instanced buildings for each type
+// LOD-enabled instanced buildings for each type
 function InstancedBuildingType({ 
   type, 
   locations,
   selectedLocation,
   onLocationClick,
-  onLocationHover
+  hoveredLocationRef
 }: { 
   type: string;
   locations: Location[];
   selectedLocation: Location | null;
   onLocationClick: (location: Location) => void;
-  onLocationHover: (location: Location | null) => void;
+  hoveredLocationRef: React.MutableRefObject<Location | null>;
 }) {
+  // Near detail (full building with windows)
   const buildingMeshRef = useRef<THREE.InstancedMesh>(null);
   const windowMeshRef = useRef<THREE.InstancedMesh>(null);
-  const { timeOfDay, weather } = useCityStore();
+  
+  // Mid detail (simple colored box)
+  const simpleBuildingMeshRef = useRef<THREE.InstancedMesh>(null);
+  
+  const { timeOfDay, weather, viewMode } = useCityStore();
   
   const config = BUILDING_CONFIGS[type];
   const isNight = timeOfDay < 6 || timeOfDay > 18;
@@ -47,7 +53,7 @@ function InstancedBuildingType({
     locations.filter(loc => loc.type === type && loc.type !== 'Park'),
   [locations, type]);
 
-  // Setup instance matrices
+  // Setup instance matrices for NEAR LOD (full detail)
   useEffect(() => {
     if (!buildingMeshRef.current || typeLocations.length === 0) return;
 
@@ -67,7 +73,27 @@ function InstancedBuildingType({
     buildingMeshRef.current.count = typeLocations.length;
   }, [typeLocations, config]);
 
-  // Setup window instances
+  // Setup instance matrices for MID LOD (simple boxes)
+  useEffect(() => {
+    if (!simpleBuildingMeshRef.current || typeLocations.length === 0) return;
+
+    const tempMatrix = new THREE.Matrix4();
+    const tempPosition = new THREE.Vector3();
+    const tempQuaternion = new THREE.Quaternion();
+    const tempScale = new THREE.Vector3(1, 1, 1);
+
+    typeLocations.forEach((location, i) => {
+      tempPosition.set(location.position[0], location.position[1] + config.height / 2, location.position[2]);
+      tempQuaternion.identity();
+      tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
+      simpleBuildingMeshRef.current!.setMatrixAt(i, tempMatrix);
+    });
+
+    simpleBuildingMeshRef.current.instanceMatrix.needsUpdate = true;
+    simpleBuildingMeshRef.current.count = typeLocations.length;
+  }, [typeLocations, config]);
+
+  // Setup window instances for NEAR LOD
   useEffect(() => {
     if (!windowMeshRef.current || typeLocations.length === 0) return;
 
@@ -134,15 +160,30 @@ function InstancedBuildingType({
     
     buildingMeshRef.current.setMatrixAt(selectedIndex, tempMatrix);
     buildingMeshRef.current.instanceMatrix.needsUpdate = true;
+    
+    // Also update simple building mesh for mid LOD
+    if (simpleBuildingMeshRef.current) {
+      simpleBuildingMeshRef.current.setMatrixAt(selectedIndex, tempMatrix);
+      simpleBuildingMeshRef.current.instanceMatrix.needsUpdate = true;
+    }
   });
 
-  // Handle click/hover on instances
+  // Handle hover using refs - NO STATE UPDATES
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation();
     if (!event.instanceId || event.instanceId >= typeLocations.length) {
-      onLocationHover(null);
+      if (hoveredLocationRef.current) {
+        hoveredLocationRef.current = null;
+      }
       return;
     }
-    onLocationHover(typeLocations[event.instanceId]);
+    hoveredLocationRef.current = typeLocations[event.instanceId];
+  };
+
+  const handlePointerOut = () => {
+    if (hoveredLocationRef.current) {
+      hoveredLocationRef.current = null;
+    }
   };
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
@@ -152,16 +193,23 @@ function InstancedBuildingType({
     }
   };
 
-  // Determine color based on weather
+  // Determine color based on weather and view mode
   const buildingColor = useMemo(() => {
     let baseColor = config.color;
+    
+    // View mode overrides
+    if (viewMode === 'Planning') {
+      // Use solid zone colors in planning mode
+      return new THREE.Color(baseColor);
+    }
+    
     if (weather === 'rain') {
       return new THREE.Color(baseColor).multiplyScalar(0.8);
     } else if (weather === 'snow') {
       return new THREE.Color(baseColor).lerp(new THREE.Color('#ffffff'), 0.3);
     }
     return new THREE.Color(baseColor);
-  }, [config.color, weather]);
+  }, [config.color, weather, viewMode]);
 
   // Calculate total windows needed
   const totalWindows = useMemo(() => {
@@ -172,46 +220,86 @@ function InstancedBuildingType({
 
   if (typeLocations.length === 0) return null;
 
+  // Render individual LOD groups for each building
   return (
-    <group>
-      {/* Instanced buildings - single draw call per type */}
-      <instancedMesh 
-        ref={buildingMeshRef}
-        args={[undefined, undefined, typeLocations.length]}
-        castShadow
-        receiveShadow
-        onClick={handleClick}
-        onPointerMove={handlePointerMove}
-        onPointerOut={() => onLocationHover(null)}
-      >
-        <boxGeometry args={[config.width, config.height, config.depth]} />
-        <meshStandardMaterial 
-          color={buildingColor}
-          metalness={0.2}
-          roughness={0.8}
-        />
-      </instancedMesh>
+    <>
+      {typeLocations.map((location, idx) => (
+        <LOD key={`${type}-${location.id}`} distances={[20, 50, 1000]}>
+          {/* Level 0 - Near (< 20 units): Full detail with windows */}
+          <group position={location.position as [number, number, number]}>
+            <mesh
+              castShadow
+              receiveShadow
+              onClick={handleClick}
+              onPointerMove={handlePointerMove}
+              onPointerOut={handlePointerOut}
+              position={[0, config.height / 2, 0]}
+              userData={{ instanceId: idx }}
+            >
+              <boxGeometry args={[config.width, config.height, config.depth]} />
+              <meshStandardMaterial 
+                color={buildingColor}
+                metalness={viewMode === 'Planning' ? 0 : 0.2}
+                roughness={viewMode === 'Planning' ? 1 : 0.8}
+              />
+            </mesh>
+            
+            {/* Windows for near detail - hide in Planning mode */}
+            {viewMode !== 'Planning' && (
+              <group>
+                {Array.from({ length: Math.floor(config.height / 0.6) }).map((_, row) =>
+                  Array.from({ length: Math.floor(config.width / 0.4) }).map((_, col) => {
+                    const isLit = isNight ? Math.random() > 0.4 : Math.random() > 0.7;
+                    return (
+                      <mesh
+                        key={`window-${row}-${col}`}
+                        position={[
+                          (col - (Math.floor(config.width / 0.4) - 1) / 2) * 0.4,
+                          row * 0.6 + 0.3,
+                          config.depth / 2 + 0.01
+                        ]}
+                      >
+                        <boxGeometry args={[0.3, 0.4, 0.05]} />
+                        <meshStandardMaterial
+                          color={isLit ? '#ffd700' : '#333333'}
+                          emissive={isLit ? '#ffd700' : '#000000'}
+                          emissiveIntensity={isLit && isNight ? 0.5 : 0}
+                          metalness={0.8}
+                          roughness={0.2}
+                        />
+                      </mesh>
+                    );
+                  })
+                )}
+              </group>
+            )}
+          </group>
 
-      {/* Instanced windows - single draw call per building type */}
-      <instancedMesh 
-        ref={windowMeshRef}
-        args={[undefined, undefined, totalWindows]}
-      >
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial
-          emissive="#ffd700"
-          emissiveIntensity={isNight ? 0.5 : 0}
-          metalness={0.8}
-          roughness={0.2}
-        />
-      </instancedMesh>
-    </group>
+          {/* Level 1 - Mid (20-50 units): Simple colored box */}
+          <mesh
+            position={location.position as [number, number, number]}
+            onClick={handleClick}
+            userData={{ instanceId: idx }}
+          >
+            <boxGeometry args={[config.width, config.height, config.depth]} />
+            <meshStandardMaterial 
+              color={buildingColor}
+              metalness={0}
+              roughness={1}
+            />
+          </mesh>
+
+          {/* Level 2 - Far (> 50 units): Invisible/hidden */}
+          <mesh visible={false} />
+        </LOD>
+      ))}
+    </>
   );
 }
 
 // Park component (kept separate as it's unique)
 function ParkComponent({ location }: { location: Location }) {
-  const { selectedLocation, setSelectedLocation, weather } = useCityStore();
+  const { selectedLocation, setSelectedLocation, weather, viewMode } = useCityStore();
   const isSelected = selectedLocation?.id === location.id;
   const hasSnow = weather === 'snow';
   
@@ -235,6 +323,9 @@ function ParkComponent({ location }: { location: Location }) {
     return positions;
   }, []);
 
+  // Hide vegetation in Planning and Traffic modes
+  const showVegetation = viewMode === 'Realistic';
+
   return (
     <group 
       position={location.position as [number, number, number]}
@@ -246,8 +337,8 @@ function ParkComponent({ location }: { location: Location }) {
         <meshStandardMaterial color="#4ade80" />
       </mesh>
       
-      {/* Trees */}
-      {treePositions.map((pos, i) => (
+      {/* Trees - hide in Planning/Traffic mode */}
+      {showVegetation && treePositions.map((pos, i) => (
         <group key={i} position={[pos[0], 0, pos[2]]}>
           {/* Tree trunk */}
           <mesh position={[0, 0.5, 0]}>
@@ -269,7 +360,7 @@ function ParkComponent({ location }: { location: Location }) {
       </mesh>
       
       {/* Snow layer */}
-      {hasSnow && (
+      {hasSnow && showVegetation && (
         <mesh position={[0, 0.15, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[3, 32]} />
           <meshStandardMaterial color="white" transparent opacity={0.8} />
@@ -288,8 +379,10 @@ function ParkComponent({ location }: { location: Location }) {
 }
 
 export function BuildingsLayer({ locations }: BuildingsLayerProps) {
-  const { setSelectedLocation } = useCityStore();
-  const [hoveredLocation, setHoveredLocation] = useState<Location | null>(null);
+  const { setSelectedLocation, viewMode } = useCityStore();
+  
+  // Use ref instead of state to avoid re-renders on hover
+  const hoveredLocationRef = useRef<Location | null>(null);
   
   const buildings = useMemo(() => locations.filter(loc => loc.type !== 'Park'), [locations]);
   const parks = useMemo(() => locations.filter(loc => loc.type === 'Park'), [locations]);
@@ -300,9 +393,14 @@ export function BuildingsLayer({ locations }: BuildingsLayerProps) {
     Array.from(new Set(buildings.map(loc => loc.type))),
   [buildings]);
 
+  // In Traffic mode, hide buildings
+  if (viewMode === 'Traffic') {
+    return null;
+  }
+
   return (
     <>
-      {/* Instanced buildings by type - massive performance improvement */}
+      {/* LOD-enabled instanced buildings by type */}
       {buildingTypes.map(type => (
         <InstancedBuildingType
           key={type}
@@ -310,7 +408,7 @@ export function BuildingsLayer({ locations }: BuildingsLayerProps) {
           locations={buildings}
           selectedLocation={selectedLocation}
           onLocationClick={setSelectedLocation}
-          onLocationHover={setHoveredLocation}
+          hoveredLocationRef={hoveredLocationRef}
         />
       ))}
       
@@ -333,25 +431,7 @@ export function BuildingsLayer({ locations }: BuildingsLayerProps) {
         </mesh>
       )}
       
-      {/* Hover glow effect */}
-      {hoveredLocation && hoveredLocation.type !== 'Park' && hoveredLocation.id !== selectedLocation?.id && (
-        <mesh 
-          position={[
-            hoveredLocation.position[0],
-            (BUILDING_CONFIGS[hoveredLocation.type]?.height || 2) / 2,
-            hoveredLocation.position[2]
-          ]}
-        >
-          <boxGeometry args={[
-            (BUILDING_CONFIGS[hoveredLocation.type]?.width || 2) + 0.2,
-            (BUILDING_CONFIGS[hoveredLocation.type]?.height || 2) + 0.2,
-            (BUILDING_CONFIGS[hoveredLocation.type]?.depth || 2) + 0.2
-          ]} />
-          <meshBasicMaterial color="#60a5fa" transparent opacity={0.3} />
-        </mesh>
-      )}
-      
-      {/* Parks rendered individually (they're unique) */}
+      {/* Parks rendered individually (they're unique) - hide in Traffic mode */}
       {parks.map((location) => (
         <ParkComponent 
           key={location.id} 
