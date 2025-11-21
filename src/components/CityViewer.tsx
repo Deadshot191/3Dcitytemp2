@@ -7,7 +7,6 @@ import { LocationInfo } from './LocationInfo';
 import { SectorSelector } from './SectorSelector';
 import { SectorAnalytics } from './SectorAnalytics';
 import { LocationComments } from './LocationComments';
-import { ExportControls } from './ExportControls';
 import { MiniMap } from './MiniMap';
 import { DarkModeToggle } from './DarkModeToggle';
 import { CameraUIControls } from './CameraUIControls';
