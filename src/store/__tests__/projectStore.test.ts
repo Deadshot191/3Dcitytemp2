@@ -112,15 +112,43 @@ describe('projectStore', () => {
         created_at: '2025-01-03T00:00:00Z',
       };
 
-      const mockFrom = vi.fn().mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({
-              data: createdProject,
+      const mockLocations = [
+        { id: 'loc1', name: 'Building 1', position: [0, 0, 0] },
+        { id: 'loc2', name: 'Building 2', position: [10, 0, 10] },
+      ];
+
+      const mockRoads = [];
+
+      // Mock multiple Supabase calls for project creation
+      const mockFrom = vi.fn().mockImplementation((table: string) => {
+        if (table === 'projects') {
+          return {
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                single: vi.fn().mockResolvedValue({
+                  data: createdProject,
+                  error: null,
+                }),
+              }),
+            }),
+          };
+        } else if (table === 'locations') {
+          return {
+            insert: vi.fn().mockReturnValue({
+              select: vi.fn().mockResolvedValue({
+                data: mockLocations,
+                error: null,
+              }),
+            }),
+          };
+        } else if (table === 'roads') {
+          return {
+            insert: vi.fn().mockResolvedValue({
+              data: mockRoads,
               error: null,
             }),
-          }),
-        }),
+          };
+        }
       });
 
       vi.mocked(supabase.from).mockImplementation(mockFrom);
