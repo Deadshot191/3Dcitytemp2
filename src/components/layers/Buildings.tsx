@@ -87,7 +87,42 @@ const BUILDING_CONFIGS: Record<string, { width: number; height: number; depth: n
   Museum: { width: 3, height: 2, depth: 3, color: '#f472b6' },
 };
 
-// LOD-enabled instanced buildings for each type
+/**
+ * InstancedBuildingType Component
+ * ================================
+ * 
+ * Renders all buildings of a specific type (e.g., Hospital, School) using instancing.
+ * 
+ * INSTANCING IMPLEMENTATION:
+ * ==========================
+ * Each building type has THREE refs for different LOD levels:
+ * 1. buildingMeshRef: Near LOD - full detail with windows
+ * 2. windowMeshRef: Window instances for near LOD
+ * 3. simpleBuildingMeshRef: Mid LOD - simple geometry
+ * 
+ * MATRIX TRANSFORMATIONS:
+ * =======================
+ * Each building instance has a 4x4 transformation matrix that defines:
+ * - Position: (x, y, z) world coordinates
+ * - Rotation: Quaternion-based orientation
+ * - Scale: Uniform or non-uniform scaling
+ * 
+ * These matrices are uploaded to GPU once and reused for all instances.
+ * 
+ * WINDOW LIGHTING SYSTEM:
+ * ========================
+ * - Procedurally generates window positions based on building dimensions
+ * - Random lit/unlit state based on time of day
+ * - Night mode: 60% windows lit
+ * - Day mode: 30% windows lit
+ * - Uses instanced color attribute for per-window colors
+ * 
+ * @param type - Building type identifier (e.g., "Hospital", "School")
+ * @param locations - All locations in the scene
+ * @param selectedLocation - Currently selected location (for animation)
+ * @param onLocationClick - Click handler callback
+ * @param hoveredLocationRef - Ref for hover state (avoids re-renders)
+ */
 function InstancedBuildingType({ 
   type, 
   locations,
