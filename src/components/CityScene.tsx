@@ -124,6 +124,24 @@ function SceneContent({ locations, roads }: CitySceneProps) {
   );
 }
 
+/**
+ * Main CityScene component that sets up the 3D canvas and rendering configuration.
+ * 
+ * CANVAS CONFIGURATION:
+ * =====================
+ * - shadows: Enables shadow casting/receiving
+ * - gl.antialias: Smooths jagged edges
+ * - gl.powerPreference: "high-performance" for dedicated GPU
+ * - gl.stencil: false (disabled for performance)
+ * - gl.shadowMap.type: PCFSoftShadowMap (quality/performance balance)
+ * - gl.pixelRatio: Capped at 2 to prevent performance issues
+ * - gl.outputColorSpace: SRGB for accurate colors
+ * - gl.toneMapping: ACESFilmicToneMapping for cinematic look
+ * - frameloop: "demand" - Only renders when scene changes (major performance boost)
+ * 
+ * @param {CitySceneProps} props - locations and roads data
+ * @returns {JSX.Element} Canvas with rendered 3D scene
+ */
 export function CityScene({ locations, roads }: CitySceneProps) {
   return (
     <Canvas 
