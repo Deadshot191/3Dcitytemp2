@@ -200,14 +200,51 @@ def generate_project_layout(
     sectors: List[str]
 ) -> Tuple[List[LocationEmbedded], List[RoadEmbedded]]:
     """
-    Generate a procedural city/campus layout based on selected sectors
+    Generate a complete procedural city/campus layout with buildings and roads.
     
+    This is the main generation function that coordinates the entire layout creation process.
+    It validates input, generates positions, creates buildings, and establishes road networks.
+    
+    Generation Process:
+        1. Template Selection: Chooses city or corporate templates based on model_type
+        2. Sector Validation: Filters out invalid sector names
+        3. Radial Positioning: Calculates zone center positions using radial algorithm
+        4. Building Generation: Creates buildings for each zone with slight offsets
+        5. Road Network Creation:
+           - Main roads: Hub (first building) to each zone representative
+           - Secondary roads: Connects buildings within same zone
+    
+    Road Network Design:
+        - Hub-and-spoke topology for main roads (efficient city navigation)
+        - Local secondary roads for intra-zone connectivity
+        - Realistic distance calculation for each road segment
+        
     Args:
-        model_type: Type of project (planning or corporate)
-        sectors: List of zone types to include
-    
+        model_type: Type of project ('planning' for city, 'corporate' for campus)
+        sectors: List of zone identifiers to include (e.g., ['government', 'healthcare'])
+        
     Returns:
-        Tuple of (locations, roads)
+        Tuple containing:
+            - locations: List of LocationEmbedded objects with position and metadata
+            - roads: List of RoadEmbedded objects connecting locations
+            
+    Raises:
+        ValueError: If no valid sectors are provided for the given model_type
+        
+    Example:
+        >>> locations, roads = generate_project_layout(
+        ...     model_type=ModelType.PLANNING,
+        ...     sectors=['government', 'healthcare', 'education']
+        ... )
+        >>> len(locations)  # 2 buildings per sector
+        6
+        >>> len(roads)  # Main roads + secondary roads
+        5
+        
+    Performance:
+        - Time: O(n + m) where n = locations, m = roads
+        - Space: O(n + m) for storing generated data
+        - Optimized for projects with up to 50 locations
     """
     
     # Select appropriate templates
