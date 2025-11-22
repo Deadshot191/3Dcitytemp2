@@ -18,7 +18,7 @@ from app.core.config import settings
 async def test_db():
     """Initialize test database connection"""
     # Use test database
-    client = AsyncIOMotorClient(settings.MONGO_URL)
+    client = AsyncIOMotorClient(settings.MONGODB_URL)
     test_db_name = "test_city_planner"
     
     # Initialize Beanie with test database
