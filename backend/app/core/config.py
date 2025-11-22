@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
@@ -19,7 +20,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     class Config:
-        env_file = ".env"
+        # Use .env.test for testing, .env for production
+        env_file = ".env.test" if os.getenv("TESTING") else ".env"
         case_sensitive = True
 
 settings = Settings()
