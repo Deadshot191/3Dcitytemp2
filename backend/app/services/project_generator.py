@@ -152,8 +152,30 @@ def calculate_distance(pos1: LocationPosition, pos2: LocationPosition) -> float:
 
 def generate_radial_positions(num_zones: int, base_radius: float = 20.0) -> List[Tuple[float, float]]:
     """
-    Generate positions in a radial pattern around center (0, 0)
-    Returns list of (x, z) coordinates for each zone center
+    Generate zone positions in a radial pattern around the origin.
+    
+    This algorithm distributes zones evenly around a circle, ensuring equal spacing
+    and optimal visual distribution. Special cases are handled for 0 and 1 zones.
+    
+    Algorithm:
+        - For 0 zones: Returns empty list
+        - For 1 zone: Returns center position (0, 0)
+        - For n zones: Distributes evenly around circle with angle = 2π/n
+        
+    Args:
+        num_zones: Number of zones to position
+        base_radius: Distance from center to zone positions (default: 20.0 units)
+        
+    Returns:
+        List of (x, z) coordinate tuples for each zone center
+        
+    Example:
+        >>> generate_radial_positions(4, base_radius=10.0)
+        [(10.0, 0.0), (0.0, 10.0), (-10.0, 0.0), (0.0, -10.0)]
+        
+    Note:
+        - Y-coordinate is always 0 (ground level)
+        - Uses polar coordinates converted to Cartesian
     """
     if num_zones == 0:
         return []
