@@ -64,7 +64,7 @@
 
 import { useRef, useState, useMemo, useEffect } from 'react';
 import { useFrame, ThreeEvent } from '@react-three/fiber';
-import { LOD } from '@react-three/drei';
+import { Detailed } from '@react-three/drei';
 import { useCityStore } from '../../store/cityStore';
 import { Location } from '../../types/city';
 import * as THREE from 'three';
@@ -324,7 +324,7 @@ function InstancedBuildingType({
   return (
     <>
       {typeLocations.map((location, idx) => (
-        <LOD key={`${type}-${location.id}`} distances={[20, 50, 1000]}>
+        <Detailed key={`${type}-${location.id}`} distances={[20, 50, 1000]}>
           {/* Level 0 - Near (< 20 units): Full detail with windows */}
           <group position={location.position as [number, number, number]}>
             <mesh
@@ -391,7 +391,7 @@ function InstancedBuildingType({
 
           {/* Level 2 - Far (> 50 units): Invisible/hidden */}
           <mesh visible={false} />
-        </LOD>
+        </Detailed>
       ))}
     </>
   );
