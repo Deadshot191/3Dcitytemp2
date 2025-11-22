@@ -1,6 +1,28 @@
 """
 Project Generation Service
-Generates procedural city layouts and corporate campuses using radial positioning
+============================
+
+This module provides procedural generation algorithms for creating realistic city planning 
+layouts and corporate campus designs. It uses radial positioning algorithms to distribute 
+buildings and zones in a natural, organized pattern.
+
+Key Features:
+    - Radial positioning algorithm for optimal zone distribution
+    - Template-based building generation with customizable properties
+    - Automatic road network generation (main and secondary roads)
+    - Support for multiple city/corporate zone types
+    - Procedural distance calculation for realistic road networks
+
+Architecture:
+    1. Zone Selection: Filters valid zones from user input
+    2. Position Generation: Uses radial algorithm to position zone centers
+    3. Building Placement: Places buildings within each zone with slight offsets
+    4. Road Network: Creates hub-and-spoke + intra-zone road connections
+    
+Performance:
+    - O(n) time complexity for location generation
+    - O(n²) worst-case for road generation (hub connectivity)
+    - Optimized for up to 50 locations per project
 """
 import math
 import uuid
