@@ -125,7 +125,25 @@ CORPORATE_ZONE_TEMPLATES = {
 
 
 def calculate_distance(pos1: LocationPosition, pos2: LocationPosition) -> float:
-    """Calculate Euclidean distance between two positions"""
+    """
+    Calculate 3D Euclidean distance between two location positions.
+    
+    Uses the standard Euclidean distance formula in 3D space:
+    distance = √(Δx² + Δy² + Δz²)
+    
+    Args:
+        pos1: First location position with x, y, z coordinates
+        pos2: Second location position with x, y, z coordinates
+        
+    Returns:
+        float: Distance in world units between the two positions
+        
+    Example:
+        >>> pos1 = LocationPosition(x=0, y=0, z=0)
+        >>> pos2 = LocationPosition(x=3, y=4, z=0)
+        >>> calculate_distance(pos1, pos2)
+        5.0
+    """
     dx = pos2.x - pos1.x
     dy = pos2.y - pos1.y
     dz = pos2.z - pos1.z
